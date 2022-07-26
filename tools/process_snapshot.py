@@ -90,58 +90,59 @@ def extract_mask(masks, mask_dir):
 
         cv2.imwrite(os.path.join(mask_dir, '{}.png'.format(i)), mask)
 
+if __name__=="__main__":        
 
-data_root = 'data/people_snapshot'
-# videos = ['female-3-casual']
-videos = os.listdir(data_root)
+    data_root = 'data/people_snapshot'
+    # videos = ['female-3-casual']
+    videos = os.listdir(data_root)
 
-model_paths = [
-    'basicModel_f_lbs_10_207_0_v1.0.0.pkl',
-    'basicmodel_m_lbs_10_207_0_v1.0.0.pkl'
-]
+    model_paths = [
+        'basicModel_f_lbs_10_207_0_v1.0.0.pkl',
+        'basicmodel_m_lbs_10_207_0_v1.0.0.pkl'
+    ]
 
-for video in videos:
-    camera_path = os.path.join(data_root, video, 'camera.pkl')
-    camera = read_pickle(camera_path)
-    K, R, T, D = get_KRTD(camera)
+    for video in videos:
+        camera_path = os.path.join(data_root, video, 'camera.pkl')
+        camera = read_pickle(camera_path)
+        K, R, T, D = get_KRTD(camera)
 
-    # process video
-    video_path = os.path.join(data_root, video, video + '.mp4')
-    extract_image(video_path)
+        # process video
+        video_path = os.path.join(data_root, video, video + '.mp4')
+        extract_image(video_path)
 
-    # process mask
-    mask_path = os.path.join(data_root, video, 'masks.hdf5')
-    masks = h5py.File(mask_path)['masks']
-    mask_dir = os.path.join(data_root, video, 'mask')
-    os.system('mkdir -p {}'.format(mask_dir))
-    extract_mask(masks, mask_dir)
+        # process mask
+        mask_path = os.path.join(data_root, video, 'masks.hdf5')
+        masks = h5py.File(mask_path)['masks']
+        mask_dir = os.path.join(data_root, video, 'mask')
+        os.system('mkdir -p {}'.format(mask_dir))
+        extract_mask(masks, mask_dir)
 
-    smpl_path = os.path.join(data_root, video, 'reconstructed_poses.hdf5')
-    smpl = h5py.File(smpl_path)
-    betas = smpl['betas']
-    pose = smpl['pose']
-    trans = smpl['trans']
+        smpl_path = os.path.join(data_root, video, 'reconstructed_poses.hdf5')
+        smpl = h5py.File(smpl_path)
+        betas = smpl['betas']
+        pose = smpl['pose']
+        trans = smpl['trans']
 
-    pose = pose[len(pose) - len(masks):]
-    trans = trans[len(trans) - len(masks):]
+        pose = pose[len(pose) - len(masks):]
+        trans = trans[len(trans) - len(masks):]
 
-    # process smpl parameters
-    params = {'beta': np.array(betas), 'pose': pose, 'trans': trans}
-    params_path = os.path.join(data_root, video, 'params.npy')
-    np.save(params_path, params)
+        # process smpl parameters
+        params = {'beta': np.array(betas), 'pose': pose, 'trans': trans}
+        params_path = os.path.join(data_root, video, 'params.npy')
+        np.save(params_path, params)
 
-    if 'female' in video:
-        model_path = model_paths[0]
-    else:
-        model_path = model_paths[1]
-    model_data = read_pickle(model_path)
+        if 'female' in video:
+            model_path = model_paths[0]
+        else:
+            model_path = model_paths[1]
+        model_data = read_pickle(model_path)
 
-    img_dir = os.path.join(data_root, video, 'image')
-    vertices_dir = os.path.join(data_root, video, 'vertices')
-    os.system('mkdir -p {}'.format(vertices_dir))
+        img_dir = os.path.join(data_root, video, 'image')
+        vertices_dir = os.path.join(data_root, video, 'vertices')
+        os.system('mkdir -p {}'.format(vertices_dir))
 
-    num_img = len(os.listdir(img_dir))
-    for i in tqdm.tqdm(range(num_img)):
-        base_smpl = Smpl(model_data)
-        vertices, mesh = get_smpl(base_smpl, betas, pose[i], trans[i])
-        np.save(os.path.join(vertices_dir, '{}.npy'.format(i)), vertices)
+        num_img = len(os.listdir(img_dir))
+        for i in tqdm.tqdm(range(num_img)):
+            base_smpl = Smpl(model_data)
+            vertices, mesh = get_smpl(base_smpl, betas, pose[i], trans[i])
+            np.save(os.path.join(vertices_dir, '{}.npy'.format(i)), vertices)
